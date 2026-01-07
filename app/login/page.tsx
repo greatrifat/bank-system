@@ -123,7 +123,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="text-xs text-gray-400 text-center mt-6">
-          Secure Banking System
+          Secure System
         </p>
       </div>
     </main>
