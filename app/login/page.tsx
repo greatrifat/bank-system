@@ -49,6 +49,7 @@ export default function LoginPage() {
       // ✅ Store token
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.role);
+      localStorage.setItem("name", data.name);
       // ✅ Store userId from token
       const payload = JSON.parse(atob(data.token.split(".")[1]));
      localStorage.setItem("userId", payload.userId);

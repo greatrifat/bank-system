@@ -19,10 +19,18 @@ export async function POST(req: Request) {
 
     const user = await User.findOne({ email });
 
-    if (!user || !user.isActive) {
+    if (!user) {
       return NextResponse.json(
         { message: "Invalid credentials" },
         { status: 401 }
+      );
+    }
+
+    // ❌ Block login if user is not active
+    if (!user.isActive) {
+      return NextResponse.json(
+        { message: "Your account is not active yet" },
+        { status: 403 } // 403 Forbidden is suitable
       );
     }
 
@@ -44,8 +52,10 @@ export async function POST(req: Request) {
       message: "Login successful",
       token,
       role: user.role,
+      name: user.name,
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error(error);
     return NextResponse.json(
       { message: "Server error" },
       { status: 500 }

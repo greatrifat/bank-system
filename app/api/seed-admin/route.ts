@@ -12,9 +12,9 @@ export async function POST() {
   }
 
   const admin = await User.create({
-    name: "Admin",
-    email: "admin@bank.com",
-    password: await hashPassword("admin123"),
+    name: "Robayet Admin",
+    email: "Robayet@gmail.com",
+    password: await hashPassword("Robayet@1"),
     role: "ADMIN",
   });
 

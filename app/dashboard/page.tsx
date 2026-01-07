@@ -20,6 +20,7 @@ interface BalanceResponse {
 export default function DashboardPage() {
   const router = useRouter();
 
+  const [name, setName] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [balance, setBalance] = useState<BalanceResponse | null>(null);
@@ -31,6 +32,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     const storedUserId = localStorage.getItem("userId");
+    const storedName = localStorage.getItem("name");
 
     if (!storedToken || !storedUserId) {
       router.replace("/login");
@@ -39,6 +41,7 @@ export default function DashboardPage() {
 
     setToken(storedToken);
     setUserId(storedUserId);
+    setName(storedName);
   }, [router]);
 
   // 🔹 Fetch balance & transactions after token and userId are loaded
@@ -109,14 +112,23 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-slate-50 p-4">
       {/* Top Bar with Logout */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-xl font-bold text-gray-700">Dashboard</h1>
-        <button
-          onClick={handleLogout}
-          className="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-xl transition"
-        >
-          Logout
-        </button>
-      </div>
+  {/* Left side: Dashboard + greeting */}
+  <div className="flex flex-col">
+    <h1 className="text-xl font-bold text-gray-700">Dashboard</h1>
+    <h2 className="text-lg font-medium text-blue-700 mt-1">
+      Hi, {name ?? "User"}
+    </h2>
+  </div>
+
+  {/* Right side: Logout button */}
+  <button
+    onClick={handleLogout}
+    className="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-xl transition"
+  >
+    Logout
+  </button>
+</div>
+
 
       {/* Balance Card */}
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 text-center">
