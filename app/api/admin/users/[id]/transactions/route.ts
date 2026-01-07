@@ -3,15 +3,35 @@ import { adminOnly } from "@/lib/adminAuth";
 import Account from "@/models/Account";
 import Transaction from "@/models/Transaction";
 import { NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
 
 export async function GET(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    adminOnly(req);
+   
     const { id } = await context.params;
 
+    // 🔐 Extract user from token
+    const token = req.headers.get("authorization")?.split(" ")[1];
+    if (!token) {
+      return NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    
+     const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+    
+        // 🛑 USER can only see own transaction
+        if (decoded.role !== "ADMIN" && decoded.userId !== id) {
+          return NextResponse.json(
+            { message: "Forbidden" },
+            { status: 403 }
+          );
+        }
+    
     await connectDB();
 
     const account = await Account.findOne({ userId: id });

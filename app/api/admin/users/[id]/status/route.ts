@@ -5,16 +5,26 @@ import { NextResponse } from "next/server";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    adminOnly(req);
+    await adminOnly(req);
+
+    const { id } = await context.params; // ✅ FIX HERE
+
     const { isActive } = await req.json();
+
+    if (typeof isActive !== "boolean") {
+      return NextResponse.json(
+        { message: "isActive must be boolean" },
+        { status: 400 }
+      );
+    }
 
     await connectDB();
 
     const user = await User.findByIdAndUpdate(
-      params.id,
+      id,
       { isActive },
       { new: true }
     ).select("-password");
@@ -30,9 +40,10 @@ export async function PATCH(
       message: `User ${isActive ? "activated" : "deactivated"}`,
       user,
     });
-  } catch {
+  } catch (error) {
+    console.error(error);
     return NextResponse.json(
-      { message: "Unauthorized or error" },
+      { message: "Unauthorized or server error" },
       { status: 403 }
     );
   }
