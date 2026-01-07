@@ -18,6 +18,11 @@ interface Transaction {
     amount: number;
     description: string;
     createdAt: string;
+    createdBy: {
+    _id: string;
+    name: string;
+    email?: string;
+  };
 }
 
 export default function AdminDashboard() {
@@ -520,9 +525,15 @@ export default function AdminDashboard() {
                                                         </p>
                                                         <p className="text-xs text-gray-800">{t.description}</p>
                                                     </div>
-                                                    <p className="text-xs text-gray-800">
+                                                    
+                                                    <div>
+                                                        <p className="text-xs font-bold text-gray-800">
+                                                        CreatedBy: {t.createdBy.name}
+                                                        </p>
+                                                        <p className="text-xs text-gray-800">
                                                         {new Date(t.createdAt).toLocaleString()}
-                                                    </p>
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </li>
                                         ))}
