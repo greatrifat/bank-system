@@ -1,5 +1,6 @@
 import { connectDB } from "@/lib/mongodb";
 import { adminOnly } from "@/lib/adminAuth";
+import User from "@/models/User";
 import Account from "@/models/Account";
 import Transaction from "@/models/Transaction";
 import { NextResponse } from "next/server";
