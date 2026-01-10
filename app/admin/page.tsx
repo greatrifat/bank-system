@@ -58,16 +58,50 @@ export default function AdminDashboard() {
     );
 
     // ---------------- Load token & check admin ----------------
-    useEffect(() => {
-        const storedToken = localStorage.getItem("token");
-        const role = localStorage.getItem("role");
+    // useEffect(() => {
+    //     const storedToken = localStorage.getItem("token");
+    //     const role = localStorage.getItem("role");
 
-        if (!storedToken || role !== "ADMIN") {
-            router.replace("/login");
+    //     if (!storedToken || role !== "ADMIN") {
+    //         router.replace("/login");
+    //         return;
+    //     }
+    //     setToken(storedToken);
+    // }, [router]);
+
+    useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    if (!storedToken || role !== "ADMIN") {
+        router.replace("/login");
+        return;
+    }
+
+    // Check if token is expired (optional, decode locally)
+    try {
+        const payload: any = JSON.parse(atob(storedToken.split(".")[1])); // decode JWT
+        const now = Date.now() / 1000; // seconds
+        if (payload.exp < now) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("role");
+            localStorage.removeItem("name");
+            localStorage.removeItem("userId");
+            router.replace("/");
             return;
         }
-        setToken(storedToken);
-    }, [router]);
+    } catch (err) {
+        // Invalid token, clean up
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        localStorage.removeItem("name");
+        localStorage.removeItem("userId");
+        router.replace("/");
+        return;
+    }
+
+    setToken(storedToken);
+}, [router]);
 
     // ---------------- Fetch Users ----------------
     const fetchUsers = async () => {
@@ -119,7 +153,7 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         if (token) fetchUsers();
-            if (token) fetchTotalBalance();
+        if (token) fetchTotalBalance();
     }, [token]);
 
         const fetchTotalBalance = async () => {

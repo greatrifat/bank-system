@@ -52,7 +52,7 @@ export default function LoginPage() {
       localStorage.setItem("name", data.name);
       // ✅ Store userId from token
       const payload = JSON.parse(atob(data.token.split(".")[1]));
-     localStorage.setItem("userId", payload.userId);
+      localStorage.setItem("userId", payload.userId);
 
       // 🔜 Redirect (we’ll build dashboards next)
       if (data.role === "ADMIN") {
