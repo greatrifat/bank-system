@@ -138,7 +138,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Transactions List */}
+      {/* Transactions List for user */}
       <div className="bg-white rounded-2xl shadow-lg p-4">
         <h3 className="text-lg font-semibold text-gray-700 mb-4">
           Recent Transactions
