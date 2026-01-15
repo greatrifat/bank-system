@@ -1,5 +1,6 @@
 import { connectDB } from "@/lib/mongodb";
 import { adminOnly } from "@/lib/adminAuth";
+import User from "@/models/User";
 import Account from "@/models/Account";
 import Transaction from "@/models/Transaction";
 import { NextResponse } from "next/server";
@@ -44,8 +45,13 @@ export async function GET(
     }
 
     const transactions = await Transaction.find({
-      accountId: account._id,
-    }).sort({ createdAt: -1 });
+  accountId: account._id,
+})
+  .populate({
+    path: "createdBy",
+    select: "name email", // choose fields you want
+  })
+  .sort({ createdAt: -1 });
 
     return NextResponse.json(transactions);
   } catch (error: any) {

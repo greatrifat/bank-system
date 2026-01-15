@@ -8,5 +8,14 @@ export function authenticate(req: Request) {
   }
 
   const token = authHeader.split(" ")[1];
-  return verifyToken(token);
+
+  try {
+    return verifyToken(token); // if valid, returns payload
+  } catch (err: any) {
+    if (err.name === "TokenExpiredError") {
+      // token expired
+      return null;
+    }
+    throw new Error("Unauthorized");
+  }
 }

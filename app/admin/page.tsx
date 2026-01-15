@@ -18,6 +18,11 @@ interface Transaction {
     amount: number;
     description: string;
     createdAt: string;
+    createdBy: {
+    _id: string;
+    name: string;
+    email?: string;
+  };
 }
 
 export default function AdminDashboard() {
@@ -61,16 +66,50 @@ export default function AdminDashboard() {
     );
 
     // ---------------- Load token & check admin ----------------
-    useEffect(() => {
-        const storedToken = localStorage.getItem("token");
-        const role = localStorage.getItem("role");
+    // useEffect(() => {
+    //     const storedToken = localStorage.getItem("token");
+    //     const role = localStorage.getItem("role");
 
-        if (!storedToken || role !== "ADMIN") {
-            router.replace("/login");
+    //     if (!storedToken || role !== "ADMIN") {
+    //         router.replace("/login");
+    //         return;
+    //     }
+    //     setToken(storedToken);
+    // }, [router]);
+
+    useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    if (!storedToken || role !== "ADMIN") {
+        router.replace("/login");
+        return;
+    }
+
+    // Check if token is expired (optional, decode locally)
+    try {
+        const payload: any = JSON.parse(atob(storedToken.split(".")[1])); // decode JWT
+        const now = Date.now() / 1000; // seconds
+        if (payload.exp < now) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("role");
+            localStorage.removeItem("name");
+            localStorage.removeItem("userId");
+            router.replace("/");
             return;
         }
-        setToken(storedToken);
-    }, [router]);
+    } catch (err) {
+        // Invalid token, clean up
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        localStorage.removeItem("name");
+        localStorage.removeItem("userId");
+        router.replace("/");
+        return;
+    }
+
+    setToken(storedToken);
+}, [router]);
 
     // ---------------- Fetch Users ----------------
     const fetchUsers = async () => {
@@ -645,9 +684,15 @@ export default function AdminDashboard() {
                                                         </p>
                                                         <p className="text-xs text-gray-800">{t.description}</p>
                                                     </div>
-                                                    <p className="text-xs text-gray-800">
+                                                    
+                                                    <div>
+                                                        <p className="text-xs font-bold text-gray-800">
+                                                        CreatedBy: {t.createdBy.name}
+                                                        </p>
+                                                        <p className="text-xs text-gray-800">
                                                         {new Date(t.createdAt).toLocaleString()}
-                                                    </p>
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </li>
                                         ))}
