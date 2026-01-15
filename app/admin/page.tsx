@@ -33,7 +33,8 @@ export default function AdminDashboard() {
     const [balances, setBalances] = useState<Record<string, number | null>>({});
     const [balancesLoading, setBalancesLoading] = useState<Record<string, boolean>>({});
     const [showTransactionsModal, setShowTransactionsModal] = useState(false);
-        const [totalBalance, setTotalBalance] = useState<number | null>(null);
+    const [totalBalance, setTotalBalance] = useState<number | null>(null);
+
 
     const [newUser, setNewUser] = useState({
         name: "",
@@ -48,7 +49,14 @@ export default function AdminDashboard() {
         description: "",
     });
 
-    const [activePanel, setActivePanel] = useState<"createUser" | "addTransaction" | "allUsers">(
+    const [profitLossData, setProfitLossData] = useState({
+        amount: 0,
+        type: "CREDIT",
+        description: "",
+    });
+
+
+    const [activePanel, setActivePanel] = useState<"createUser" | "addTransaction" | "allUsers" | "addProfitLoss">(
         "createUser"
     );
 
@@ -114,33 +122,33 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         if (token) fetchUsers();
-            if (token) fetchTotalBalance();
+        if (token) fetchTotalBalance();
     }, [token]);
 
-        const fetchTotalBalance = async () => {
-            if (!token) return;
-            setTotalBalance(null);
-            try {
-                const res = await fetch(`/api/admin/bank`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                const data = await res.json();
-                if (!res.ok) {
-                    console.error("Failed to fetch total balance", data);
-                    setTotalBalance(null);
-                    return null;
-                }
-
-                // prefer common keys
-                const tb = typeof data.totalBalance === "number" ? data.totalBalance : typeof data.balance === "number" ? data.balance : null;
-                setTotalBalance(tb);
-                return tb;
-            } catch (err) {
-                console.error(err);
+    const fetchTotalBalance = async () => {
+        if (!token) return;
+        setTotalBalance(null);
+        try {
+            const res = await fetch(`/api/admin/bank`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                console.error("Failed to fetch total balance", data);
                 setTotalBalance(null);
                 return null;
             }
-        };
+
+            // prefer common keys
+            const tb = typeof data.totalBalance === "number" ? data.totalBalance : typeof data.balance === "number" ? data.balance : null;
+            setTotalBalance(tb);
+            return tb;
+        } catch (err) {
+            console.error(err);
+            setTotalBalance(null);
+            return null;
+        }
+    };
 
     // ---------------- Fetch transactions ----------------
     const fetchTransactions = async (userId: string) => {
@@ -178,7 +186,7 @@ export default function AdminDashboard() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || "Failed to create user");
             alert("User created successfully!");
-            setNewUser({ name: "", email: "", password: ""});
+            setNewUser({ name: "", email: "", password: "" });
             fetchUsers();
             setActivePanel("allUsers");
         } catch (err: any) {
@@ -247,6 +255,48 @@ export default function AdminDashboard() {
         }
     };
 
+    // ---------------- Add Profit/Loss ----------------
+    const handleAddProfitLoss = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!token) return;
+
+        try {
+            const res = await fetch("/api/admin/bank", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    amount: profitLossData.amount,
+                    type: profitLossData.type,
+                    description: profitLossData.description,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.message || "Failed to apply profit/loss");
+            }
+
+            alert(
+                `${profitLossData.type} applied successfully.\nPer user: ${data.amountPerUser}`
+            );
+
+            // reset form
+            setProfitLossData({ amount: 0, type: "CREDIT", description: "" });
+
+            // refresh dashboard data
+            fetchUsers();
+            fetchTotalBalance();
+            setActivePanel("allUsers");
+        } catch (err: any) {
+            alert(err.message);
+        }
+    };
+
+
     // ---------------- Summary ----------------
     const totalUsers = users.length;
     const activeUsers = users.filter((u) => u.isActive).length;
@@ -286,7 +336,7 @@ export default function AdminDashboard() {
                     <p className="text-gray-500 text-sm">Total Balance</p>
                     <p className="text-xl font-bold text-green-600 mt-1">{totalBalance == null ? "Loading..." : `${totalBalance.toLocaleString()} BDT`}</p>
                 </div>
-               
+
             </div>
 
             {/* Row 3: Action Buttons */}
@@ -304,6 +354,13 @@ export default function AdminDashboard() {
                     onClick={() => setActivePanel("addTransaction")}
                 >
                     Add Transaction
+                </button>
+                <button
+                    className={`px-4 py-2 rounded-lg font-semibold ${activePanel === "addProfitLoss" ? "bg-blue-600 text-white" : "bg-white shadow hover:bg-gray-100"
+                        }`}
+                    onClick={() => setActivePanel("addProfitLoss")}
+                >
+                    Add Profit/Loss
                 </button>
                 <button
                     className={`px-4 py-2 rounded-lg font-semibold ${activePanel === "allUsers" ? "bg-blue-600 text-white" : "bg-white shadow hover:bg-gray-100"
@@ -409,6 +466,74 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
+                {/* Add Profit/Loss Panel */}
+                <div className="flex justify-center">
+                    <div className="w-full max-w-2xl">
+                        {activePanel === "addProfitLoss" && (
+                            <div className="bg-white text-gray-800 p-6 rounded-xl shadow max-w-md space-y-3">
+                                <h2 className="text-lg font-semibold mb-4">
+                                    Add Profit / Loss (All Active Users)
+                                </h2>
+
+                                <form onSubmit={handleAddProfitLoss} className="space-y-3">
+                                    <input
+                                        type="number"
+                                        placeholder="Total Amount"
+                                        required
+                                        value={profitLossData.amount}
+                                        onChange={(e) =>
+                                            setProfitLossData({
+                                                ...profitLossData,
+                                                amount: Number(e.target.value),
+                                            })
+                                        }
+                                        className="w-full p-2 border rounded-lg"
+                                    />
+
+                                    <select
+                                        value={profitLossData.type}
+                                        onChange={(e) =>
+                                            setProfitLossData({
+                                                ...profitLossData,
+                                                type: e.target.value,
+                                            })
+                                        }
+                                        className="w-full p-2 border rounded-lg"
+                                    >
+                                        <option value="CREDIT">CREDIT (Profit)</option>
+                                        <option value="DEBIT">DEBIT (Loss / Charge)</option>
+                                    </select>
+
+                                    <input
+                                        type="text"
+                                        placeholder="Description"
+                                        required
+                                        value={profitLossData.description}
+                                        onChange={(e) =>
+                                            setProfitLossData({
+                                                ...profitLossData,
+                                                description: e.target.value,
+                                            })
+                                        }
+                                        className="w-full p-2 border rounded-lg"
+                                    />
+
+                                    <button
+                                        type="submit"
+                                        className={`w-full py-2 rounded-lg text-white
+                                                ${profitLossData.type === "CREDIT"
+                                                ? "bg-green-600 hover:bg-green-700"
+                                                : "bg-red-600 hover:bg-red-700"}`}
+                                    >
+                                        Apply {profitLossData.type}
+                                    </button>
+                                </form>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+
                 {/* All Users Panel */}
                 <div className="flex justify-center">
                     <div className="w-full max-w-2xl">
@@ -443,7 +568,7 @@ export default function AdminDashboard() {
                                                             ${user.isActive
                                                             ? "bg-yellow-500 hover:bg-yellow-600"
                                                             : "bg-red-500 hover:bg-red-600"}
-                                                            ${updatingUserId === user._id 
+                                                            ${updatingUserId === user._id
                                                             ? "opacity-60 cursor-not-allowed" : ""}
                                                             `}
                                                 >
@@ -510,7 +635,7 @@ export default function AdminDashboard() {
                                         {transactions.map((t) => (
                                             <li
                                                 key={t._id}
-                                                className={`p-3 rounded ${t.type === "DEBIT" 
+                                                className={`p-3 rounded ${t.type === "DEBIT"
                                                     ? "bg-red-200" : "bg-green-200"}`}
                                             >
                                                 <div className="flex justify-between items-center">
