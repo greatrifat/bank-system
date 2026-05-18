@@ -5,8 +5,8 @@ import "./globals.css";
 
 
 export const metadata: Metadata = {
-  title: "Alokito Agro",
-  description: "Alokito Poribesh Foundation",
+  title: "Rangamati Tour",
+  description: "Rangamati Tour Management System",
 };
 
 export default function RootLayout({
