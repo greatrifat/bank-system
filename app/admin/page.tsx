@@ -19,10 +19,10 @@ interface Transaction {
     description: string;
     createdAt: string;
     createdBy: {
-    _id: string;
-    name: string;
-    email?: string;
-  };
+        _id: string;
+        name: string;
+        email?: string;
+    };
 }
 
 export default function AdminDashboard() {
@@ -39,6 +39,13 @@ export default function AdminDashboard() {
     const [balancesLoading, setBalancesLoading] = useState<Record<string, boolean>>({});
     const [showTransactionsModal, setShowTransactionsModal] = useState(false);
     const [totalBalance, setTotalBalance] = useState<number | null>(null);
+
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [previewData, setPreviewData] = useState({
+        totalUsers: 0,
+        amountPerUser: 0,
+        users: [] as { name: string, email: string }[],
+    });
 
 
     const [newUser, setNewUser] = useState({
@@ -78,19 +85,28 @@ export default function AdminDashboard() {
     // }, [router]);
 
     useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    const role = localStorage.getItem("role");
+        const storedToken = localStorage.getItem("token");
+        const role = localStorage.getItem("role");
 
-    if (!storedToken || role !== "ADMIN") {
-        router.replace("/login");
-        return;
-    }
+        if (!storedToken || role !== "ADMIN") {
+            router.replace("/login");
+            return;
+        }
 
-    // Check if token is expired (optional, decode locally)
-    try {
-        const payload: any = JSON.parse(atob(storedToken.split(".")[1])); // decode JWT
-        const now = Date.now() / 1000; // seconds
-        if (payload.exp < now) {
+        // Check if token is expired (optional, decode locally)
+        try {
+            const payload: any = JSON.parse(atob(storedToken.split(".")[1])); // decode JWT
+            const now = Date.now() / 1000; // seconds
+            if (payload.exp < now) {
+                localStorage.removeItem("token");
+                localStorage.removeItem("role");
+                localStorage.removeItem("name");
+                localStorage.removeItem("userId");
+                router.replace("/");
+                return;
+            }
+        } catch (err) {
+            // Invalid token, clean up
             localStorage.removeItem("token");
             localStorage.removeItem("role");
             localStorage.removeItem("name");
@@ -98,18 +114,9 @@ export default function AdminDashboard() {
             router.replace("/");
             return;
         }
-    } catch (err) {
-        // Invalid token, clean up
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
-        localStorage.removeItem("name");
-        localStorage.removeItem("userId");
-        router.replace("/");
-        return;
-    }
 
-    setToken(storedToken);
-}, [router]);
+        setToken(storedToken);
+    }, [router]);
 
     // ---------------- Fetch Users ----------------
     const fetchUsers = async () => {
@@ -295,8 +302,78 @@ export default function AdminDashboard() {
     };
 
     // ---------------- Add Profit/Loss ----------------
+    //old code without preview START
+    // const handleAddProfitLoss = async (e: React.FormEvent) => {
+    //     e.preventDefault();
+    //     if (!token) return;
+
+    //     try {
+    //         const res = await fetch("/api/admin/bank", {
+    //             method: "POST",
+    //             headers: {
+    //                 "Content-Type": "application/json",
+    //                 Authorization: `Bearer ${token}`,
+    //             },
+    //             body: JSON.stringify({
+    //                 amount: profitLossData.amount,
+    //                 type: profitLossData.type,
+    //                 description: profitLossData.description,
+    //             }),
+    //         });
+
+    //         const data = await res.json();
+
+    //         if (!res.ok) {
+    //             throw new Error(data.message || "Failed to apply profit/loss");
+    //         }
+
+    //         alert(
+    //             `${profitLossData.type} applied successfully.\nPer user: ${data.amountPerUser}`
+    //         );
+
+    //         // reset form
+    //         setProfitLossData({ amount: 0, type: "CREDIT", description: "" });
+
+    //         // refresh dashboard data
+    //         fetchUsers();
+    //         fetchTotalBalance();
+    //         setActivePanel("allUsers");
+    //     } catch (err: any) {
+    //         alert(err.message);
+    //     }
+    // };
+    //old code without preview END
+
     const handleAddProfitLoss = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        const activeUsers = users.filter(
+            (u: any) => u.isActive && u.role === "USER"
+        );
+
+        if (activeUsers.length === 0) {
+            return alert("No active users found");
+        }
+
+        const totalUsers = activeUsers.length;
+
+        const amountPerUser = Number(
+            (profitLossData.amount / totalUsers).toFixed(2)
+        );
+
+        setPreviewData({
+            totalUsers,
+            amountPerUser,
+            users: activeUsers.map((u: any) => ({
+                name: u.name,
+                email: u.email
+            })),
+        });
+
+        setShowConfirmModal(true);
+    };
+
+    const confirmProfitLoss = async () => {
         if (!token) return;
 
         try {
@@ -323,17 +400,25 @@ export default function AdminDashboard() {
                 `${profitLossData.type} applied successfully.\nPer user: ${data.amountPerUser}`
             );
 
-            // reset form
-            setProfitLossData({ amount: 0, type: "CREDIT", description: "" });
+            setShowConfirmModal(false);
 
-            // refresh dashboard data
+            setProfitLossData({
+                amount: 0,
+                type: "CREDIT",
+                description: "",
+            });
+
             fetchUsers();
             fetchTotalBalance();
             setActivePanel("allUsers");
+
         } catch (err: any) {
             alert(err.message);
         }
     };
+
+
+
 
 
     // ---------------- Summary ----------------
@@ -506,6 +591,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Add Profit/Loss Panel */}
+
                 <div className="flex justify-center">
                     <div className="w-full max-w-2xl">
                         {activePanel === "addProfitLoss" && (
@@ -571,6 +657,60 @@ export default function AdminDashboard() {
                         )}
                     </div>
                 </div>
+                //new code for confirmation modal
+                {showConfirmModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-md">
+
+                            <h2 className="text-lg text-gray-700 font-semibold mb-4">
+                                Confirm Operation
+                            </h2>
+
+                            <div className="space-y-2 text-gray-700">
+                                <p><strong>Type:</strong> {profitLossData.type}</p>
+                                <p><strong>Total Users:</strong> {previewData.totalUsers}</p>
+                                <p><strong>Total Amount:</strong> {profitLossData.amount}</p>
+                                <p><strong>Per User:</strong> {previewData.amountPerUser}</p>
+                                <p><strong>Description:</strong> {profitLossData.description}</p>
+                            </div>
+
+                            <div className="mt-4">
+                                <p className="font-semibold text-gray-700 mb-2">Affected Users:</p>
+
+                                <div className="max-h-40 overflow-y-auto border rounded p-2 bg-gray-50 text-gray-700">
+                                    {previewData.users.map((u, index) => (
+                                        <div
+                                            key={index}
+                                            className="text-sm py-2 border-b last:border-b-0"
+                                        >
+                                            <div className="font-medium">{u.name}</div>
+
+                                            <div className="text-xs text-gray-500">
+                                                {u.email}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-3 mt-6">
+                                <button
+                                    onClick={() => setShowConfirmModal(false)}
+                                    className="px-4 py-2 rounded-lg bg-red-700"
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    onClick={confirmProfitLoss}
+                                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+                                >
+                                    Confirm
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
 
                 {/* All Users Panel */}
@@ -684,13 +824,13 @@ export default function AdminDashboard() {
                                                         </p>
                                                         <p className="text-xs text-gray-800">{t.description}</p>
                                                     </div>
-                                                    
+
                                                     <div>
                                                         <p className="text-xs font-bold text-gray-800">
-                                                        CreatedBy: {t.createdBy.name}
+                                                            CreatedBy: {t.createdBy.name}
                                                         </p>
                                                         <p className="text-xs text-gray-800">
-                                                        {new Date(t.createdAt).toLocaleString()}
+                                                            {new Date(t.createdAt).toLocaleString()}
                                                         </p>
                                                     </div>
                                                 </div>

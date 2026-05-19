@@ -24,20 +24,20 @@ export async function PATCH(
     await connectDB();
 
     // 🔒 If trying to deactivate, check account balance
-    if (isActive === false) {
-      const account = await Account.findOne({ userId: id });
+    // if (isActive === false) {
+    //   const account = await Account.findOne({ userId: id });
 
-      if (account && account.balance !== 0) {
-        return NextResponse.json(
-          {
-            message:
-              "User cannot be deactivated. Account balance must be zero.",
-            balance: account.balance,
-          },
-          { status: 400 }
-        );
-      }
-    }
+    //   if (account && account.balance !== 0) {
+    //     return NextResponse.json(
+    //       {
+    //         message:
+    //           "User cannot be deactivated. Account balance must be zero.",
+    //         balance: account.balance,
+    //       },
+    //       { status: 400 }
+    //     );
+    //   }
+    // }
 
     const user = await User.findByIdAndUpdate(
       id,
