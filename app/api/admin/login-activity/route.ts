@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
+import { adminOnly } from "@/lib/adminAuth";
 import LoginActivity from "@/models/LoginActivity";
+import User from "@/models/User";
 
 export async function GET() {
   try {
+    await adminOnly(req); // ✅ admin check
     await connectDB();
 
     const logs = await LoginActivity.find()
@@ -12,9 +15,14 @@ export async function GET() {
 
     return NextResponse.json(logs);
   } catch (error) {
-    return NextResponse.json(
-      { message: "Failed to fetch login activity" },
-      { status: 500 }
-    );
-  }
+  console.error("LOGIN ACTIVITY ERROR:", error);
+
+  return NextResponse.json(
+    {
+      message: "Failed to fetch login activity",
+      error: String(error),
+    },
+    { status: 500 }
+  );
+}
 }
