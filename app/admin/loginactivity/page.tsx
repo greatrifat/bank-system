@@ -22,10 +22,12 @@ export default function LoginActivityPage() {
         const fetchLogs = async () => {
             try {
                 const res = await fetch("/api/admin/login-activity");
-                const data: LoginActivity[] = await res.json();
-                setLogs(data);
+                const data = await res.json();
+
+                setLogs(Array.isArray(data) ? data : []);
             } catch (err) {
                 console.error(err);
+                setLogs([]);
             } finally {
                 setLoading(false);
             }
@@ -72,8 +74,8 @@ export default function LoginActivityPage() {
 
                                 <td
                                     className={`border p-2 font-semibold ${log.status === "success"
-                                            ? "text-green-600"
-                                            : "text-red-600"
+                                        ? "text-green-600"
+                                        : "text-red-600"
                                         }`}
                                 >
                                     {log.status}
