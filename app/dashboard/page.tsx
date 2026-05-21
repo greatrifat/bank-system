@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [name, setName] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string>("");
   const [balance, setBalance] = useState<BalanceResponse | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +52,13 @@ export default function DashboardPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
+
+        // 0️⃣ Notice
+        const noticeRes = await fetch("/api/admin/notice");
+        if (noticeRes.ok) {
+          const noticeData = await noticeRes.json();
+          setNotice(noticeData.message || "");
+        }
 
         // 1️⃣ Fetch balance
         const balanceRes = await fetch(`/api/admin/users/${userId}/balance`, {
@@ -109,25 +117,32 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-4">
+    <main className="h-screen bg-slate-50 p-4 flex flex-col overflow-hidden">
       {/* Top Bar with Logout */}
       <div className="flex justify-between items-center mb-6">
-  {/* Left side: Dashboard + greeting */}
-  <div className="flex flex-col">
-    <h1 className="text-xl font-bold text-gray-700">Dashboard</h1>
-    <h2 className="text-lg font-medium text-blue-700 mt-1">
-      Hi, {name ?? "User"}
-    </h2>
-  </div>
+        {/* Left side: Dashboard + greeting */}
+        <div className="flex flex-col">
+          <h1 className="text-xl font-bold text-gray-700">Dashboard</h1>
+          <h2 className="text-lg font-medium text-blue-700 mt-1">
+            Hi, {name ?? "User"}
+          </h2>
+        </div>
 
-  {/* Right side: Logout button */}
-  <button
-    onClick={handleLogout}
-    className="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-xl transition"
-  >
-    Logout
-  </button>
-</div>
+        {/* Right side: Logout button */}
+        <button
+          onClick={handleLogout}
+          className="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-xl transition"
+        >
+          Logout
+        </button>
+      </div>
+
+      {/* Notice */}
+      {notice && (
+        <div className="bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-2 rounded-xl mb-4 text-sm">
+          ⚠️ : {notice}
+        </div>
+      )}
 
 
       {/* Balance Card */}
@@ -139,38 +154,41 @@ export default function DashboardPage() {
       </div>
 
       {/* Transactions List for user */}
-      <div className="bg-white rounded-2xl shadow-lg p-4">
+      <div className="bg-white rounded-2xl shadow-lg p-4 flex-1 overflow-hidden flex flex-col">
         <h3 className="text-lg font-semibold text-gray-700 mb-4">
           Recent Transactions
         </h3>
+        
+        <div className="flex-1 overflow-y-auto pr-1">
+  {transactions.length === 0 ? (
+    <p className="text-gray-800 text-center">No transactions yet</p>
+  ) : (
+    <ul className="space-y-3">
+      {transactions.map((tx) => (
+        <li
+          key={tx._id}
+          className="flex justify-between items-center p-3 rounded-xl bg-slate-200"
+        >
+          <div>
+            <p className="font-medium text-gray-800">{tx.description}</p>
+            <p className="text-xs text-gray-800">
+              {new Date(tx.createdAt).toLocaleString()}
+            </p>
+          </div>
 
-        {transactions.length === 0 ? (
-          <p className="text-gray-800 text-center">No transactions yet</p>
-        ) : (
-          <ul className="space-y-3">
-            {transactions.map((tx) => (
-              <li
-                key={tx._id}
-                className="flex justify-between items-center p-3 rounded-xl bg-slate-200"
-              >
-                <div>
-                  <p className="font-medium text-gray-800">{tx.description}</p>
-                  <p className="text-xs text-gray-800">
-                    {new Date(tx.createdAt).toLocaleString()}
-                  </p>
-                </div>
-                <div
-                  className={`font-semibold ${
-                    tx.type === "CREDIT" ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {tx.type === "CREDIT" ? "+" : "-"}
-                  {tx.amount.toLocaleString()} {balance?.currency}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+          <div
+            className={`font-semibold ${
+              tx.type === "CREDIT" ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {tx.type === "CREDIT" ? "+" : "-"}
+            {tx.amount.toLocaleString()} {balance?.currency}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
       </div>
     </main>
   );

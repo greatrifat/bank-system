@@ -439,12 +439,18 @@ export default function AdminDashboard() {
             {/* Row 1: Header */}
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-700">Admin Dashboard</h1>
-                 <Link
-      href="/admin/loginactivity"
-      className="text-sm bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-2 rounded-lg inline-block"
-    >
-      Login Activity
-    </Link>
+                <Link
+                    href="/admin/loginactivity"
+                    className="text-sm bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-2 rounded-lg inline-block"
+                >
+                    Login Activity
+                </Link>
+                <Link
+                    href="/admin/notice"
+                    className="text-sm bg-green-500 hover:bg-green-600 text-white px-2 py-2 rounded-lg inline-block"
+                >
+                    Notice
+                </Link>
                 <button
                     onClick={handleLogout}
                     className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
