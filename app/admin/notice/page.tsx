@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export default function NoticePage() {
   const [message, setMessage] = useState("");
@@ -39,7 +40,13 @@ export default function NoticePage() {
   if (loading) return <p>Loading...</p>;
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
+    <div className="p-6 bg-gray-100 text-gray-800 max-w-xl mx-auto">
+        <Link
+                href="/admin"
+                className="inline-block mb-4 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-lg"
+            >
+                ← Back to Admin
+            </Link>
       <h1 className="text-xl font-bold mb-4">Admin Notice</h1>
 
       <textarea

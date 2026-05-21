@@ -438,25 +438,34 @@ export default function AdminDashboard() {
         <main className="min-h-screen p-6 bg-gray-100">
             {/* Row 1: Header */}
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-700">Admin Dashboard</h1>
-                <Link
-                    href="/admin/loginactivity"
-                    className="text-sm bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-2 rounded-lg inline-block"
-                >
-                    Login Activity
-                </Link>
-                <Link
-                    href="/admin/notice"
-                    className="text-sm bg-green-500 hover:bg-green-600 text-white px-2 py-2 rounded-lg inline-block"
-                >
-                    Notice
-                </Link>
-                <button
-                    onClick={handleLogout}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
-                >
-                    Logout
-                </button>
+                <div className="flex items-center justify-between">
+                    <h1 className="text-lg font-bold text-gray-700">
+                        Admin Dashboard
+                    </h1>
+
+                    <div className="flex items-center gap-3">
+                        <Link
+                            href="/admin/loginactivity"
+                            className="text-sm bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-2 rounded-lg"
+                        >
+                            Login Activity
+                        </Link>
+
+                        <Link
+                            href="/admin/notice"
+                            className="text-sm bg-green-500 hover:bg-green-600 text-white px-2 py-2 rounded-lg"
+                        >
+                            Notice
+                        </Link>
+
+                        <button
+                            onClick={handleLogout}
+                            className="text-sm bg-red-600 hover:bg-red-700 text-white px-2 py-2 rounded-lg"
+                        >
+                            Logout
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* Row 2: Summary Cards */}
@@ -670,7 +679,7 @@ export default function AdminDashboard() {
                         )}
                     </div>
                 </div>
-                //new code for confirmation modal
+        
                 {showConfirmModal && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                         <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-md">
