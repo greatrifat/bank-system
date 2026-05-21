@@ -24,5 +24,9 @@ const LoginActivitySchema = new Schema(
   { timestamps: true }
 );
 
+LoginActivitySchema.index({ loginTime: -1 });
+LoginActivitySchema.index({ status: 1 });
+LoginActivitySchema.index({ userId: 1 });
+
 export default models.LoginActivity ||
   mongoose.model("LoginActivity", LoginActivitySchema);

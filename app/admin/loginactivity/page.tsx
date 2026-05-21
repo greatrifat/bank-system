@@ -14,27 +14,43 @@ type LoginActivity = {
     loginTime: string;
 };
 
+
 export default function LoginActivityPage() {
     const [logs, setLogs] = useState<LoginActivity[]>([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    // UI (draft)
+    const [searchDraft, setSearchDraft] = useState("");
+    const [statusDraft, setStatusDraft] = useState("all");
+    const [status, setStatus] = useState("all");
+    const [search, setSearch] = useState("");
+    const [totalPages, setTotalPages] = useState(1);
+
+
 
     useEffect(() => {
         const fetchLogs = async () => {
             try {
-                const res = await fetch("/api/admin/login-activity");
+                setLoading(true);
+
+                const res = await fetch(
+                    `/api/admin/login-activity?page=${page}&limit=10&status=${status}&search=${search}`
+                );
+
                 const data = await res.json();
 
-                setLogs(Array.isArray(data) ? data : []);
+                setLogs(data.logs || []);
+                setTotalPages(data.pagination.totalPages || 1);
+
             } catch (err) {
                 console.error(err);
-                setLogs([]);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchLogs();
-    }, []);
+    }, [page, status, search]);
 
     if (loading) {
         return <p className="p-4">Loading...</p>;
@@ -48,7 +64,47 @@ export default function LoginActivityPage() {
             >
                 ← Back to Admin
             </Link>
+
+
+
             <h1 className="text-xl font-bold mb-4">Login Activity</h1>
+
+            <div className="flex flex-wrap gap-3 mb-4">
+
+                 {/* SEARCH */}
+    <input
+        type="text"
+        placeholder="Search user/email..."
+        value={searchDraft}
+        onChange={(e) => setSearchDraft(e.target.value)}
+        className="border px-3 py-2 rounded-lg"
+    />
+
+    {/* STATUS */}
+    <select
+        value={statusDraft}
+        onChange={(e) => setStatusDraft(e.target.value)}
+        className="border px-3 py-2 rounded-lg"
+    >
+        <option value="all">All</option>
+        <option value="success">Success</option>
+        <option value="failed">Failed</option>
+        <option value="wrong_password">Wrong Password</option>
+    </select>
+
+                {/* APPLY BUTTON */}
+                <button
+                    onClick={() => {
+                        setPage(1);
+                        setSearch(searchDraft);
+                        setStatus(statusDraft);
+                    }}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                >
+                    Apply Filters
+                </button>
+
+            </div>
 
             <div className="overflow-x-auto">
                 <table className="w-full border border-gray-300 text-sm">
@@ -88,6 +144,29 @@ export default function LoginActivityPage() {
                         ))}
                     </tbody>
                 </table>
+                <div className="flex items-center justify-center gap-4 mt-4">
+
+                    <button
+                        disabled={page === 1}
+                        onClick={() => setPage((p) => p - 1)}
+                        className="px-3 py-1 border rounded disabled:opacity-50"
+                    >
+                        Prev
+                    </button>
+
+                    <span>
+                        Page {page} of {totalPages}
+                    </span>
+
+                    <button
+                        disabled={page === totalPages}
+                        onClick={() => setPage((p) => p + 1)}
+                        className="px-3 py-1 border rounded disabled:opacity-50"
+                    >
+                        Next
+                    </button>
+
+                </div>
             </div>
         </div>
     );
