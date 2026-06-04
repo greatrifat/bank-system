@@ -25,6 +25,8 @@ export default function DashboardPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string>("");
   const [balance, setBalance] = useState<BalanceResponse | null>(null);
+  const [totalCredit, setTotalCredit] = useState<number>(0);
+  const [totalDebit, setTotalDebit] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -76,6 +78,21 @@ export default function DashboardPage() {
         if (!txRes.ok) throw new Error("Failed to fetch transactions");
         const txData = await txRes.json();
         setTransactions(txData);
+
+        let credit = 0;
+        let debit = 0;
+
+        txData.forEach((tx: Transaction) => {
+          if (tx.type === "CREDIT") {
+            credit += tx.amount;
+          } else {
+            debit += tx.amount;
+          }
+        });
+
+        setTotalCredit(credit);
+        setTotalDebit(debit);
+
       } catch (err: any) {
         setError(err.message || "Something went wrong");
       } finally {
@@ -146,11 +163,33 @@ export default function DashboardPage() {
 
 
       {/* Balance Card */}
-      <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 text-center">
-        <h2 className="text-gray-500 text-sm">Current Balance</h2>
-        <p className="text-2xl font-bold text-blue-600 mt-2">
-          {balance?.balance.toLocaleString()} {balance?.currency}
-        </p>
+      <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+        <div className="grid grid-cols-3 gap-4 text-center">
+
+          <div>
+            <h2 className="text-gray-500 text-sm">Total Credit</h2>
+            <p className="text-lg font-bold text-green-600 mt-2">
+              {totalCredit?.toLocaleString()} 
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-gray-500 text-sm">Total Debit</h2>
+            <p className="text-lg font-bold text-red-600 mt-2">
+              {totalDebit?.toLocaleString()} 
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-gray-500 text-sm">Current Balance</h2>
+            <p
+              className="text-lg font-bold text-blue-600 mt-2"
+            >
+              {balance?.balance?.toLocaleString()} {balance?.currency}
+            </p>
+          </div>
+
+        </div>
       </div>
 
       {/* Transactions List for user */}
@@ -158,37 +197,36 @@ export default function DashboardPage() {
         <h3 className="text-lg font-semibold text-gray-700 mb-4">
           Recent Transactions
         </h3>
-        
-        <div className="flex-1 overflow-y-auto pr-1">
-  {transactions.length === 0 ? (
-    <p className="text-gray-800 text-center">No transactions yet</p>
-  ) : (
-    <ul className="space-y-3">
-      {transactions.map((tx) => (
-        <li
-          key={tx._id}
-          className="flex justify-between items-center p-3 rounded-xl bg-slate-200"
-        >
-          <div>
-            <p className="font-medium text-gray-800">{tx.description}</p>
-            <p className="text-xs text-gray-800">
-              {new Date(tx.createdAt).toLocaleString()}
-            </p>
-          </div>
 
-          <div
-            className={`font-semibold ${
-              tx.type === "CREDIT" ? "text-green-600" : "text-red-600"
-            }`}
-          >
-            {tx.type === "CREDIT" ? "+" : "-"}
-            {tx.amount.toLocaleString()} {balance?.currency}
-          </div>
-        </li>
-      ))}
-    </ul>
-  )}
-</div>
+        <div className="flex-1 overflow-y-auto pr-1">
+          {transactions.length === 0 ? (
+            <p className="text-gray-800 text-center">No transactions yet</p>
+          ) : (
+            <ul className="space-y-3">
+              {transactions.map((tx) => (
+                <li
+                  key={tx._id}
+                  className="flex justify-between items-center p-3 rounded-xl bg-slate-200"
+                >
+                  <div>
+                    <p className="font-medium text-gray-800">{tx.description}</p>
+                    <p className="text-xs text-gray-800">
+                      {new Date(tx.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div
+                    className={`font-semibold ${tx.type === "CREDIT" ? "text-green-600" : "text-red-600"
+                      }`}
+                  >
+                    {tx.type === "CREDIT" ? "+" : "-"}
+                    {tx.amount.toLocaleString()} {balance?.currency}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </main>
   );

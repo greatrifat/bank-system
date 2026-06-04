@@ -82,22 +82,22 @@ export async function POST(req: Request) {
     });
 
     // 🔴 STRICT VALIDATION FOR DEBIT
-    if (type === "DEBIT") {
-      const insufficientAccounts = accounts.filter(
-        acc => acc.balance < amountPerUser
-      );
+    // if (type === "DEBIT") {
+    //   const insufficientAccounts = accounts.filter(
+    //     acc => acc.balance < amountPerUser
+    //   );
 
-      if (insufficientAccounts.length > 0) {
-        return NextResponse.json(
-          {
-            message: "Bulk debit failed. One or more users have insufficient balance.",
-            requiredPerUser: amountPerUser,
-            failedUsers: insufficientAccounts.length,
-          },
-          { status: 400 }
-        );
-      }
-    }
+    //   if (insufficientAccounts.length > 0) {
+    //     return NextResponse.json(
+    //       {
+    //         message: "Bulk debit failed. One or more users have insufficient balance.",
+    //         requiredPerUser: amountPerUser,
+    //         failedUsers: insufficientAccounts.length,
+    //       },
+    //       { status: 400 }
+    //     );
+    //   }
+    // }
 
 
     const bulkAccountOps = [];

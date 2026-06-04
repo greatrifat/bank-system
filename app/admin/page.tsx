@@ -679,7 +679,7 @@ export default function AdminDashboard() {
                         )}
                     </div>
                 </div>
-        
+
                 {showConfirmModal && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                         <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-md">
@@ -755,7 +755,15 @@ export default function AdminDashboard() {
                                                     Balance: {balancesLoading[user._id] ? (
                                                         <span>Loading...</span>
                                                     ) : balances[user._id] != null ? (
-                                                        <span>{balances[user._id]!.toLocaleString()} BDT</span>
+                                                        <span
+                                                            className={
+                                                                balances[user._id]! < 0
+                                                                    ? "text-red-600 font-semibold"
+                                                                    : "text-green-600"
+                                                            }
+                                                        >
+                                                            {balances[user._id]!.toLocaleString()} BDT
+                                                        </span>
                                                     ) : (
                                                         <span>-</span>
                                                     )}
