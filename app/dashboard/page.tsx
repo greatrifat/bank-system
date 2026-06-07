@@ -247,7 +247,7 @@ export default function DashboardPage() {
 
           <button
             onClick={handleDownloadPDF}
-            className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl"
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl"
           >
             Download PDF
           </button>

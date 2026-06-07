@@ -11,7 +11,7 @@ export default function HomePage() {
         
         {/* App Title */}
         <h1 className="text-2xl font-bold text-blue-600 mb-2">
-          Rangamati Tour
+          টাকার খেলা
         </h1>
 
         <p className="text-gray-500 text-sm mb-8">
@@ -28,7 +28,7 @@ export default function HomePage() {
 
         {/* Footer Text */}
         <p className="text-xs text-gray-400 mt-6">
-           Management System
+           kire taka de?
         </p>
       </div>
     </main>

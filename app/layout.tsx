@@ -5,8 +5,8 @@ import "./globals.css";
 
 
 export const metadata: Metadata = {
-  title: "Rangamati Tour",
-  description: "Rangamati Tour Management System",
+  title: "টাকার হিসাব",
+  description: "টাকার হিসাব Clear",
 };
 
 export default function RootLayout({
