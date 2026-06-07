@@ -1,5 +1,6 @@
 "use client";
-
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -111,6 +112,51 @@ export default function DashboardPage() {
     router.replace("/login");
   };
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    const downloadTime = new Date().toLocaleString();
+
+    // Title
+    doc.setFontSize(16);
+    doc.text("Account Report", 14, 15);
+
+    // User Info
+    doc.setFontSize(12);
+    doc.text(`Name: ${name}`, 14, 25);
+    doc.text(`Balance: ${balance?.balance} ${balance?.currency}`, 14, 32);
+
+    // Summary
+    doc.text(`Total Credit: ${totalCredit}`, 14, 40);
+    doc.text(`Total Debit: ${totalDebit}`, 14, 47);
+
+    // Transactions Table
+    autoTable(doc, {
+      startY: 55,
+      head: [["Date", "Type", "Description", "Amount"]],
+      body: transactions.map((tx) => [
+        new Date(tx.createdAt).toLocaleString(),
+        tx.type,
+        tx.description,
+        `${tx.type === "CREDIT" ? "+" : "-"}${tx.amount}`,
+      ]),
+    });
+
+    // 👇 Get last Y position after table
+    const finalY = (doc as any).lastAutoTable.finalY || 60;
+
+    // Footer - Download time
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Downloaded at: ${downloadTime}`, 14, finalY + 10);
+
+    // Developer credit
+    doc.text(`Developed by Robayet`, 14, finalY + 17);
+
+    const fileName = `${name || "user"}.pdf`;
+
+    doc.save(fileName);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -169,14 +215,14 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-gray-500 text-sm">Total Credit</h2>
             <p className="text-lg font-bold text-green-600 mt-2">
-              {totalCredit?.toLocaleString()} 
+              {totalCredit?.toLocaleString()}
             </p>
           </div>
 
           <div>
             <h2 className="text-gray-500 text-sm">Total Debit</h2>
             <p className="text-lg font-bold text-red-600 mt-2">
-              {totalDebit?.toLocaleString()} 
+              {totalDebit?.toLocaleString()}
             </p>
           </div>
 
@@ -194,9 +240,19 @@ export default function DashboardPage() {
 
       {/* Transactions List for user */}
       <div className="bg-white rounded-2xl shadow-lg p-4 flex-1 overflow-hidden flex flex-col">
-        <h3 className="text-lg font-semibold text-gray-700 mb-4">
-          Recent Transactions
-        </h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-700">
+            Recent Transactions
+          </h3>
+
+          <button
+            onClick={handleDownloadPDF}
+            className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl"
+          >
+            Download PDF
+          </button>
+        </div>
+
 
         <div className="flex-1 overflow-y-auto pr-1">
           {transactions.length === 0 ? (
@@ -228,6 +284,7 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
     </main>
   );
 }
