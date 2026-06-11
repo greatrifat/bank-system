@@ -1,30 +1,30 @@
 import { connectDB } from "@/lib/mongodb";
 import { adminOnly } from "@/lib/adminAuth";
 import Account from "@/models/Account";
-import User from "@/models/User";
+import UserProject from "@/models/UserProject";
 import Transaction from "@/models/Transaction";
+import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 
+// GET: total balance across all accounts in a project
 export async function GET(req: Request) {
   try {
-    await adminOnly(req); // ✅ admin check
-
+    await adminOnly(req);
     await connectDB();
 
+    const { searchParams } = new URL(req.url);
+    const projectId = searchParams.get("projectId");
+
+    const matchStage = projectId
+      ? { projectId: new mongoose.Types.ObjectId(projectId) }
+      : {};
+
     const result = await Account.aggregate([
-      {
-        $group: {
-          _id: null,
-          totalBalance: { $sum: "$balance" },
-        },
-      },
+      { $match: matchStage },
+      { $group: { _id: null, totalBalance: { $sum: "$balance" } } },
     ]);
 
-    const totalBalance = result[0]?.totalBalance || 0;
-
-    return NextResponse.json({
-      totalBalance,
-    });
+    return NextResponse.json({ totalBalance: result[0]?.totalBalance || 0 });
   } catch (error: any) {
     return NextResponse.json(
       { message: error.message || "Unauthorized" },
@@ -33,18 +33,15 @@ export async function GET(req: Request) {
   }
 }
 
-
-
+// POST: distribute amount equally among all active members of a project
 export async function POST(req: Request) {
   try {
-    const admin: any = adminOnly(req); // ✅ admin check
+    const admin: any = adminOnly(req);
     await connectDB();
 
-    const { amount, type, description } = await req.json();
-    const roundTo2 = (num: number) =>
-      Math.round((num + Number.EPSILON) * 100) / 100;
+    const { amount, type, description, projectId } = await req.json();
+    const roundTo2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
-    // ✅ Validation
     if (!amount || typeof amount !== "number" || amount <= 0) {
       return NextResponse.json(
         { message: "Invalid amount. Must be a positive number." },
@@ -54,54 +51,32 @@ export async function POST(req: Request) {
 
     if (!["CREDIT", "DEBIT"].includes(type)) {
       return NextResponse.json(
-        { message: "Invalid transaction type. Must be CREDIT or DEBIT." },
+        { message: "Invalid transaction type." },
         { status: 400 }
       );
     }
 
-    // ✅ Get active users
-    const activeUsers = await User.find({ isActive: true, role: "USER" });
+    if (!projectId) {
+      return NextResponse.json({ message: "projectId is required" }, { status: 400 });
+    }
 
-    if (activeUsers.length === 0) {
+    // Active members of this project
+    const activeMemberships = await UserProject.find({ projectId, isActive: true });
+
+    if (activeMemberships.length === 0) {
       return NextResponse.json(
-        { message: "No active users found." },
+        { message: "No active users in this project." },
         { status: 400 }
       );
     }
 
-    const totalUsers = activeUsers.length;
-    // raw value
-    const rawAmountPerUser = amount / totalUsers;
-    // ✅ rounded value (2 decimal)
-    const amountPerUser = roundTo2(rawAmountPerUser);
+    const userIds = activeMemberships.map((m: any) => m.userId);
+    const amountPerUser = roundTo2(amount / activeMemberships.length);
 
+    const accounts = await Account.find({ projectId, userId: { $in: userIds } });
 
-    // ✅ Get accounts
-    const accounts = await Account.find({
-      userId: { $in: activeUsers.map((u) => u._id) },
-    });
-
-    // 🔴 STRICT VALIDATION FOR DEBIT
-    // if (type === "DEBIT") {
-    //   const insufficientAccounts = accounts.filter(
-    //     acc => acc.balance < amountPerUser
-    //   );
-
-    //   if (insufficientAccounts.length > 0) {
-    //     return NextResponse.json(
-    //       {
-    //         message: "Bulk debit failed. One or more users have insufficient balance.",
-    //         requiredPerUser: amountPerUser,
-    //         failedUsers: insufficientAccounts.length,
-    //       },
-    //       { status: 400 }
-    //     );
-    //   }
-    // }
-
-
-    const bulkAccountOps = [];
-    const bulkTransactionOps = [];
+    const bulkAccountOps: any[] = [];
+    const bulkTransactionOps: any[] = [];
 
     for (const account of accounts) {
       const newBalance =
@@ -116,28 +91,28 @@ export async function POST(req: Request) {
         },
       });
 
-      // ✅ Transaction create
       bulkTransactionOps.push({
         insertOne: {
           document: {
-            accountId: account._id,
+            accountId:   account._id,
+            userId:      account.userId,
+            projectId,
             type,
-            amount: amountPerUser,
+            amount:      amountPerUser,
             description,
-            createdBy: admin.userId,
+            createdBy:   admin.userId,
           },
         },
       });
     }
 
-    // ✅ Execute bulk operations  
     await Account.bulkWrite(bulkAccountOps);
     await Transaction.bulkWrite(bulkTransactionOps);
 
     return NextResponse.json({
-      message: "Bulk balance update successful",
+      message:         "Bulk balance update successful",
       type,
-      totalUsers,
+      totalUsers:      activeMemberships.length,
       amountPerUser,
       accountsUpdated: bulkAccountOps.length,
     });

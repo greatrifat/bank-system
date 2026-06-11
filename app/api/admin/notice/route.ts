@@ -2,16 +2,17 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Notice from "@/models/Notice";
 
-// GET: fetch latest notice
-export async function GET() {
+export async function GET(req: Request) {
   try {
     await connectDB();
 
-    let notice = await Notice.findOne();
+    const { searchParams } = new URL(req.url);
+    const projectId = searchParams.get("projectId") || null;
 
-    // if not exists, create empty notice
+    let notice = await Notice.findOne({ projectId });
+
     if (!notice) {
-      notice = await Notice.create({ message: "" });
+      notice = await Notice.create({ message: "", projectId });
     }
 
     return NextResponse.json(notice);
@@ -23,15 +24,15 @@ export async function GET() {
   }
 }
 
-// POST: update notice
 export async function POST(req: Request) {
   try {
     await connectDB();
 
     const body = await req.json();
+    const projectId = body.projectId || null;
 
     const updated = await Notice.findOneAndUpdate(
-      {},
+      { projectId },
       { message: body.message },
       { new: true, upsert: true }
     );

@@ -1,7 +1,4 @@
 import { connectDB } from "@/lib/mongodb";
-import { adminOnly } from "@/lib/adminAuth";
-import User from "@/models/User";
-import Account from "@/models/Account";
 import Transaction from "@/models/Transaction";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
@@ -11,47 +8,40 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-   
     const { id } = await context.params;
 
-    // 🔐 Extract user from token
     const token = req.headers.get("authorization")?.split(" ")[1];
     if (!token) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
-    
-     const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
-    
-        // 🛑 USER can only see own transaction
-        if (decoded.role !== "ADMIN" && decoded.userId !== id) {
-          return NextResponse.json(
-            { message: "Forbidden" },
-            { status: 403 }
-          );
-        }
-    
+
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    if (decoded.role !== "ADMIN" && decoded.userId !== id) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const projectId = searchParams.get("projectId");
+
+    if (!projectId) {
+      return NextResponse.json({ message: "projectId is required" }, { status: 400 });
+    }
+
     await connectDB();
 
-    const account = await Account.findOne({ userId: id });
+    const isAdmin = decoded.role === "ADMIN";
 
-    if (!account) {
-      return NextResponse.json(
-        { message: "Account not found" },
-        { status: 404 }
-      );
+    // Select only the fields each role actually needs
+    const query = Transaction.find({ userId: id, projectId })
+      .select("type amount description createdAt" + (isAdmin ? " createdBy" : ""))
+      .sort({ createdAt: -1 });
+
+    if (isAdmin) {
+      query.populate("createdBy", "name -_id");
     }
 
-    const transactions = await Transaction.find({
-  accountId: account._id,
-})
-  .populate({
-    path: "createdBy",
-    select: "name email", // choose fields you want
-  })
-  .sort({ createdAt: -1 });
+    const transactions = await query;
 
     return NextResponse.json(transactions);
   } catch (error: any) {
@@ -61,4 +51,3 @@ export async function GET(
     );
   }
 }
-

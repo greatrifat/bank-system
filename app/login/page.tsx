@@ -14,7 +14,7 @@ export default function LoginPage() {
   const role = localStorage.getItem("role");
   if (token && role) {
     if (role === "ADMIN") router.replace("/admin");
-    else router.replace("/dashboard");
+    else router.replace("/projects");
   }
 }, [router]);
 
@@ -46,19 +46,17 @@ export default function LoginPage() {
         throw new Error(data.message || "Login failed");
       }
 
-      // ✅ Store token
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.role);
       localStorage.setItem("name", data.name);
-      // ✅ Store userId from token
       const payload = JSON.parse(atob(data.token.split(".")[1]));
       localStorage.setItem("userId", payload.userId);
 
-      // 🔜 Redirect (we’ll build dashboards next)
       if (data.role === "ADMIN") {
         router.push("/admin");
       } else {
-        router.push("/dashboard");
+        localStorage.setItem("userProjects", JSON.stringify(data.projects || []));
+        router.push("/projects");
       }
     } catch (err: any) {
       setError(err.message);
@@ -115,9 +113,12 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl transition disabled:opacity-60"
+            className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium py-3 rounded-xl transition disabled:opacity-60 min-h-[48px] flex items-center justify-center gap-2"
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading && (
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            )}
+            {loading ? "Logging in…" : "Login"}
           </button>
         </form>
 

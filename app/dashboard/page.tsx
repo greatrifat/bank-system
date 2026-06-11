@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [name, setName] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string>("");
   const [notice, setNotice] = useState<string>("");
   const [balance, setBalance] = useState<BalanceResponse | null>(null);
   const [totalCredit, setTotalCredit] = useState<number>(0);
@@ -46,6 +47,7 @@ export default function DashboardPage() {
     setToken(storedToken);
     setUserId(storedUserId);
     setName(storedName);
+    setProjectId(localStorage.getItem("selectedProjectId") || "");
   }, [router]);
 
   // 🔹 Fetch balance & transactions after token and userId are loaded
@@ -57,23 +59,24 @@ export default function DashboardPage() {
         setLoading(true);
 
         // 0️⃣ Notice
-        const noticeRes = await fetch("/api/admin/notice");
+        const noticeRes = await fetch(`/api/admin/notice?projectId=${projectId}`);
         if (noticeRes.ok) {
           const noticeData = await noticeRes.json();
           setNotice(noticeData.message || "");
         }
 
         // 1️⃣ Fetch balance
-        const balanceRes = await fetch(`/api/admin/users/${userId}/balance`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const balanceRes = await fetch(
+          `/api/admin/users/${userId}/balance?projectId=${projectId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
         if (!balanceRes.ok) throw new Error("Failed to fetch balance");
         const balanceData = await balanceRes.json();
         setBalance(balanceData);
 
         // 2️⃣ Fetch transactions
         const txRes = await fetch(
-          `/api/admin/users/${userId}/transactions`,
+          `/api/admin/users/${userId}/transactions?projectId=${projectId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (!txRes.ok) throw new Error("Failed to fetch transactions");
@@ -106,9 +109,7 @@ export default function DashboardPage() {
 
   // 🔹 Logout handler
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    localStorage.removeItem("userId");
+    localStorage.clear();
     router.replace("/login");
   };
 
@@ -159,19 +160,22 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-blue-600 font-medium">Loading dashboard...</p>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-gray-500 text-sm">Loading dashboard…</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <p className="text-red-600 font-medium mb-4">{error}</p>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 px-4">
+        <p className="text-red-600 font-medium text-center">{error}</p>
         <button
           onClick={handleLogout}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl text-sm font-medium"
         >
           Logout
         </button>
@@ -180,111 +184,109 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="h-screen bg-slate-50 p-4 flex flex-col overflow-hidden">
-      {/* Top Bar with Logout */}
-      <div className="flex justify-between items-center mb-6">
-        {/* Left side: Dashboard + greeting */}
-        <div className="flex flex-col">
-          <h1 className="text-xl font-bold text-gray-700">Dashboard</h1>
-          <h2 className="text-lg font-medium text-blue-700 mt-1">
-            Hi, {name ?? "User"}
-          </h2>
+    <main className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Top Bar */}
+      <div className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 px-4 py-3 flex justify-between items-center gap-3">
+        <div className="flex flex-col min-w-0">
+          <button
+            onClick={() => router.push("/projects")}
+            className="text-xs text-blue-500 hover:text-blue-700 text-left mb-0.5 w-fit"
+          >
+            ← Back to Projects
+          </button>
+          <h1 className="text-base font-bold text-gray-700 leading-tight">Dashboard</h1>
+          <p className="text-sm text-blue-700 font-medium truncate">Hi, {name ?? "User"}</p>
         </div>
-
-        {/* Right side: Logout button */}
         <button
           onClick={handleLogout}
-          className="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-xl transition"
+          className="shrink-0 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-medium px-4 py-2 rounded-xl transition text-sm"
         >
           Logout
         </button>
       </div>
 
-      {/* Notice */}
-      {notice && (
-        <div className="bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-2 rounded-xl mb-4 text-sm">
-          ⚠️ : {notice}
+      <div className="flex flex-col gap-4 p-4 flex-1">
+        {/* Notice */}
+        {notice && (
+          <div className="bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-3 rounded-xl text-sm">
+            ⚠️ {notice}
+          </div>
+        )}
+
+        {/* Balance Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+          <div className="grid grid-cols-3 divide-x divide-slate-100 text-center">
+            <div className="pr-2">
+              <p className="text-gray-500 text-xs mb-1">Total Credit</p>
+              <p className="text-base font-bold text-green-600 tabular-nums">
+                {totalCredit?.toLocaleString()}
+              </p>
+            </div>
+            <div className="px-2">
+              <p className="text-gray-500 text-xs mb-1">Total Debit</p>
+              <p className="text-base font-bold text-red-600 tabular-nums">
+                {totalDebit?.toLocaleString()}
+              </p>
+            </div>
+            <div className="pl-2">
+              <p className="text-gray-500 text-xs mb-1">Balance</p>
+              <p className="text-base font-bold text-blue-600 tabular-nums">
+                {balance?.balance?.toLocaleString()}
+                <span className="text-xs font-normal ml-0.5">{balance?.currency}</span>
+              </p>
+            </div>
+          </div>
         </div>
-      )}
 
-
-      {/* Balance Card */}
-      <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-        <div className="grid grid-cols-3 gap-4 text-center">
-
-          <div>
-            <h2 className="text-gray-500 text-sm">Total Credit</h2>
-            <p className="text-lg font-bold text-green-600 mt-2">
-              {totalCredit?.toLocaleString()}
-            </p>
-          </div>
-
-          <div>
-            <h2 className="text-gray-500 text-sm">Total Debit</h2>
-            <p className="text-lg font-bold text-red-600 mt-2">
-              {totalDebit?.toLocaleString()}
-            </p>
-          </div>
-
-          <div>
-            <h2 className="text-gray-500 text-sm">Current Balance</h2>
-            <p
-              className="text-lg font-bold text-blue-600 mt-2"
+        {/* Transactions */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-col flex-1">
+          <div className="flex justify-between items-center mb-4 gap-2">
+            <h3 className="text-base font-semibold text-gray-700">Recent Transactions</h3>
+            <button
+              onClick={handleDownloadPDF}
+              className="shrink-0 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-sm px-3 py-2 rounded-xl transition"
             >
-              {balance?.balance?.toLocaleString()} {balance?.currency}
-            </p>
+              PDF
+            </button>
           </div>
 
-        </div>
-      </div>
-
-      {/* Transactions List for user */}
-      <div className="bg-white rounded-2xl shadow-lg p-4 flex-1 overflow-hidden flex flex-col">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-700">
-            Recent Transactions
-          </h3>
-
-          <button
-            onClick={handleDownloadPDF}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl"
-          >
-            Download PDF
-          </button>
-        </div>
-
-
-        <div className="flex-1 overflow-y-auto pr-1">
-          {transactions.length === 0 ? (
-            <p className="text-gray-800 text-center">No transactions yet</p>
-          ) : (
-            <ul className="space-y-3">
-              {transactions.map((tx) => (
-                <li
-                  key={tx._id}
-                  className="flex justify-between items-center p-3 rounded-xl bg-slate-200"
-                >
-                  <div>
-                    <p className="font-medium text-gray-800">{tx.description}</p>
-                    <p className="text-xs text-gray-800">
-                      {new Date(tx.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-
-                  <div
-                    className={`font-semibold ${tx.type === "CREDIT" ? "text-green-600" : "text-red-600"
-                      }`}
+          <div className="overflow-y-auto max-h-[55vh] -mr-1 pr-1">
+            {transactions.length === 0 ? (
+              <p className="text-gray-500 text-center py-8 text-sm">No transactions yet</p>
+            ) : (
+              <ul className="space-y-2">
+                {transactions.map((tx) => (
+                  <li
+                    key={tx._id}
+                    className="flex justify-between items-center p-3 rounded-xl bg-slate-50 border border-slate-100"
                   >
-                    {tx.type === "CREDIT" ? "+" : "-"}
-                    {tx.amount.toLocaleString()} {balance?.currency}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                    <div className="min-w-0 mr-2">
+                      <p className="font-medium text-gray-800 text-sm truncate">{tx.description}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {new Date(tx.createdAt).toLocaleDateString(undefined, {
+                          day: "numeric", month: "short", year: "numeric",
+                        })}
+                        {" · "}
+                        {new Date(tx.createdAt).toLocaleTimeString(undefined, {
+                          hour: "2-digit", minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <div
+                      className={`shrink-0 font-semibold text-sm tabular-nums ${
+                        tx.type === "CREDIT" ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {tx.type === "CREDIT" ? "+" : "−"}
+                      {tx.amount.toLocaleString()}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
-
     </main>
   );
 }

@@ -1,6 +1,5 @@
 import { connectDB } from "@/lib/mongodb";
-import User from "@/models/User";
-import Account from "@/models/Account";
+import UserProject from "@/models/UserProject";
 import { adminOnly } from "@/lib/adminAuth";
 import { NextResponse } from "next/server";
 
@@ -12,7 +11,7 @@ export async function PATCH(
     await adminOnly(req);
 
     const { id } = await context.params;
-    const { isActive } = await req.json();
+    const { isActive, projectId } = await req.json();
 
     if (typeof isActive !== "boolean") {
       return NextResponse.json(
@@ -21,40 +20,31 @@ export async function PATCH(
       );
     }
 
+    if (!projectId) {
+      return NextResponse.json(
+        { message: "projectId is required" },
+        { status: 400 }
+      );
+    }
+
     await connectDB();
 
-    // 🔒 If trying to deactivate, check account balance
-    // if (isActive === false) {
-    //   const account = await Account.findOne({ userId: id });
-
-    //   if (account && account.balance !== 0) {
-    //     return NextResponse.json(
-    //       {
-    //         message:
-    //           "User cannot be deactivated. Account balance must be zero.",
-    //         balance: account.balance,
-    //       },
-    //       { status: 400 }
-    //     );
-    //   }
-    // }
-
-    const user = await User.findByIdAndUpdate(
-      id,
+    const membership = await UserProject.findOneAndUpdate(
+      { userId: id, projectId },
       { isActive },
       { new: true }
-    ).select("-password");
+    );
 
-    if (!user) {
+    if (!membership) {
       return NextResponse.json(
-        { message: "User not found" },
+        { message: "User is not a member of this project" },
         { status: 404 }
       );
     }
 
     return NextResponse.json({
-      message: `User ${isActive ? "activated" : "deactivated"} successfully`,
-      user,
+      message: `User ${isActive ? "activated" : "deactivated"} in this project`,
+      isActive: membership.isActive,
     });
   } catch (error) {
     console.error(error);
