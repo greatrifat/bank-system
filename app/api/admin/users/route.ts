@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 import UserProject from "@/models/UserProject";
 import Account from "@/models/Account";
+import "@/models/Project";
 import { hashPassword } from "@/lib/password";
 import { adminOnly } from "@/lib/adminAuth";
 import { NextResponse } from "next/server";
