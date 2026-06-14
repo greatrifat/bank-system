@@ -9,8 +9,14 @@ import { NextResponse } from "next/server";
 // GET: list users for a project (with project-specific isActive)
 // or all users with their project memberships (no projectId filter)
 export async function GET(req: Request) {
+  // Auth check isolated so its error doesn't get swallowed by DB errors
   try {
     adminOnly(req);
+  } catch {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
+  }
+
+  try {
     await connectDB();
 
     const { searchParams } = new URL(req.url);
@@ -21,7 +27,7 @@ export async function GET(req: Request) {
         .populate("userId", "-password");
 
       const users = memberships
-        .filter((m: any) => m.userId) // guard against deleted users
+        .filter((m: any) => m.userId)
         .map((m: any) => ({
           ...m.userId.toObject(),
           isActive: m.isActive,
@@ -43,13 +49,16 @@ export async function GET(req: Request) {
       );
       return {
         ...u.toObject(),
-        memberProjects: userMemberships.map((m: any) => m.projectId),
+        memberProjects: userMemberships
+          .map((m: any) => m.projectId)
+          .filter(Boolean), // drop any refs whose Project was deleted
       };
     });
 
     return NextResponse.json(usersWithProjects);
-  } catch {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
+  } catch (error: any) {
+    console.error("GET /api/admin/users error:", error);
+    return NextResponse.json({ message: error.message || "Server error" }, { status: 500 });
   }
 }
 

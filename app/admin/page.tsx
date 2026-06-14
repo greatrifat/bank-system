@@ -234,10 +234,11 @@ export default function AdminDashboard() {
             const res = await fetch("/api/admin/users", {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            const data: User[] = await res.json();
-            setAllUsers(data);
+            const data = await res.json();
+            setAllUsers(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error(err);
+            setAllUsers([]);
         }
     };
 
