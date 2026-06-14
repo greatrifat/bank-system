@@ -25,6 +25,8 @@ export default function DashboardPage() {
   const [token, setToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<string>("");
+  const [projectName, setProjectName] = useState<string>("");
+  const [projectCode, setProjectCode] = useState<string>("");
   const [notice, setNotice] = useState<string>("");
   const [balance, setBalance] = useState<BalanceResponse | null>(null);
   const [totalCredit, setTotalCredit] = useState<number>(0);
@@ -33,7 +35,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // 🔹 Read token and userId from localStorage in browser only
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     const storedUserId = localStorage.getItem("userId");
@@ -48,6 +49,8 @@ export default function DashboardPage() {
     setUserId(storedUserId);
     setName(storedName);
     setProjectId(localStorage.getItem("selectedProjectId") || "");
+    setProjectName(localStorage.getItem("selectedProjectName") || "");
+    setProjectCode(localStorage.getItem("selectedProjectCode") || "");
   }, [router]);
 
   // 🔹 Fetch balance & transactions after token and userId are loaded
@@ -115,47 +118,119 @@ export default function DashboardPage() {
 
   const handleDownloadPDF = () => {
     const doc = new jsPDF();
-    const downloadTime = new Date().toLocaleString();
+    const pageW = doc.internal.pageSize.getWidth();
+    const generatedAt = new Date().toLocaleString();
 
-    // Title
+    // ── Header band ──────────────────────────────────────────────
+    doc.setFillColor(37, 99, 235); // blue-600
+    doc.rect(0, 0, pageW, 28, "F");
+
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
-    doc.text("Account Report", 14, 15);
+    doc.setFont("helvetica", "bold");
+    doc.text("Account Statement", 14, 12);
 
-    // User Info
-    doc.setFontSize(12);
-    doc.text(`Name: ${name}`, 14, 25);
-    doc.text(`Balance: ${balance?.balance} ${balance?.currency}`, 14, 32);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    if (projectName) doc.text(projectName, 14, 20);
+    doc.text(`Generated: ${generatedAt}`, pageW - 14, 20, { align: "right" });
 
-    // Summary
-    doc.text(`Total Credit: ${totalCredit}`, 14, 40);
-    doc.text(`Total Debit: ${totalDebit}`, 14, 47);
+    // ── Info section ─────────────────────────────────────────────
+    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Account Holder", 14, 38);
 
-    // Transactions Table
-    autoTable(doc, {
-      startY: 55,
-      head: [["Date", "Type", "Description", "Amount"]],
-      body: transactions.map((tx) => [
-        new Date(tx.createdAt).toLocaleString(),
-        tx.type,
-        tx.description,
-        `${tx.type === "CREDIT" ? "+" : "-"}${tx.amount}`,
-      ]),
+    doc.setFont("helvetica", "normal");
+    doc.text(name ?? "—", 14, 45);
+    if (projectCode) {
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Project code: ${projectCode}`, 14, 51);
+    }
+
+    // ── Summary boxes ─────────────────────────────────────────────
+    const currency = balance?.currency ?? "BDT";
+    const summaryY = 60;
+    const boxW = (pageW - 28) / 3;
+
+    const summaryItems = [
+      { label: "Total Credit", value: `+${totalCredit.toLocaleString()} ${currency}`, color: [22, 163, 74] as [number,number,number] },
+      { label: "Total Debit",  value: `-${totalDebit.toLocaleString()} ${currency}`,  color: [220, 38, 38]  as [number,number,number] },
+      { label: "Balance",      value: `${(balance?.balance ?? 0).toLocaleString()} ${currency}`, color: [37, 99, 235] as [number,number,number] },
+    ];
+
+    summaryItems.forEach((item, i) => {
+      const x = 14 + i * (boxW + 2);
+      doc.setDrawColor(220, 220, 220);
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(x, summaryY, boxW, 18, 2, 2, "FD");
+
+      doc.setFontSize(7);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont("helvetica", "normal");
+      doc.text(item.label, x + boxW / 2, summaryY + 6, { align: "center" });
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...item.color);
+      doc.text(item.value, x + boxW / 2, summaryY + 13, { align: "center" });
     });
 
-    // 👇 Get last Y position after table
-    const finalY = (doc as any).lastAutoTable.finalY || 60;
-
-    // Footer - Download time
+    // ── Transactions table ────────────────────────────────────────
+    doc.setTextColor(30, 30, 30);
     doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Downloaded at: ${downloadTime}`, 14, finalY + 10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Transaction History", 14, summaryY + 28);
 
-    // Developer credit
-    doc.text(`Developed by Robayet`, 14, finalY + 17);
+    autoTable(doc, {
+      startY: summaryY + 32,
+      head: [["Date", "Type", "Description", "Amount"]],
+      body: transactions.map((tx) => [
+        new Date(tx.createdAt).toLocaleDateString(undefined, {
+          day: "2-digit", month: "short", year: "numeric",
+        }),
+        tx.type,
+        tx.description ?? "—",
+        `${tx.type === "CREDIT" ? "+" : "-"}${tx.amount.toLocaleString()} ${currency}`,
+      ]),
+      headStyles: {
+        fillColor: [37, 99, 235],
+        textColor: 255,
+        fontStyle: "bold",
+        fontSize: 9,
+      },
+      bodyStyles: { fontSize: 9, textColor: [30, 30, 30] },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { cellWidth: 30 },
+        1: { cellWidth: 20 },
+        3: { halign: "right", cellWidth: 38 },
+      },
+      didParseCell(data) {
+        if (data.section === "body" && data.column.index === 1) {
+          data.cell.styles.textColor =
+            data.cell.raw === "CREDIT" ? [22, 163, 74] : [220, 38, 38];
+          data.cell.styles.fontStyle = "bold";
+        }
+        if (data.section === "body" && data.column.index === 3) {
+          const raw = String(data.cell.raw ?? "");
+          data.cell.styles.textColor = raw.startsWith("+")
+            ? [22, 163, 74]
+            : [220, 38, 38];
+        }
+      },
+    });
 
-    const fileName = `${name || "user"}.pdf`;
+    // ── Footer ───────────────────────────────────────────────────
+    const finalY = (doc as any).lastAutoTable.finalY ?? summaryY + 32;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(160, 160, 160);
+    doc.text("This is a system-generated statement.", 14, finalY + 10);
+    doc.text("Developed by Robayet", pageW - 14, finalY + 10, { align: "right" });
 
-    doc.save(fileName);
+    doc.save(`${name ?? "account"}-${projectCode || "statement"}.pdf`);
   };
 
   if (loading) {
@@ -186,20 +261,34 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-slate-50 flex flex-col">
       {/* Top Bar */}
-      <div className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 px-4 py-3 flex justify-between items-center gap-3">
-        <div className="flex flex-col min-w-0">
-          <button
-            onClick={() => router.push("/projects")}
-            className="text-xs text-blue-500 hover:text-blue-700 text-left mb-0.5 w-fit"
-          >
-            ← Back to Projects
-          </button>
-          <h1 className="text-base font-bold text-gray-700 leading-tight">Dashboard</h1>
-          <p className="text-sm text-blue-700 font-medium truncate">Hi, {name ?? "User"}</p>
+      <div className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center justify-between relative">
+        {/* Left */}
+        <button
+          onClick={() => router.push("/projects")}
+          className="text-xs text-blue-500 hover:text-blue-700 transition z-10"
+        >
+          ← Back
+        </button>
+
+        {/* Center */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+          <p className="text-sm font-bold text-gray-800">{name}</p>
+          <div className="flex items-center gap-1 mt-0.5">
+            {projectCode && (
+              <span className="text-xs font-mono bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded leading-none">
+                {projectCode}
+              </span>
+            )}
+            <p className="text-xs text-gray-400 leading-none">
+              {projectName || "Dashboard"}
+            </p>
+          </div>
         </div>
+
+        {/* Right */}
         <button
           onClick={handleLogout}
-          className="shrink-0 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-medium px-4 py-2 rounded-xl transition text-sm"
+          className="shrink-0 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-medium px-4 py-2 rounded-xl transition text-sm z-10"
         >
           Logout
         </button>
